@@ -1,0 +1,121 @@
+---
+title: "Clustering Mini Project"
+author: "Cathy Kiriakos"
+date: "October 20, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, install_packages, include=FALSE}
+install.packages(c("cluster", "rattle.data","NbClust"))
+library(cluster)
+library(rattle.data)
+library(NbClust)
+```
+
+
+### K-Means exercise from 'R in Action'
+Go here for the original blog post and solutions
+http://www.r-bloggers.com/k-means-clustering-from-r-in-action/
+
+Now load the data and look at the first few rows
+
+```{r, load_data}
+data(wine, package="rattle.data")
+head(wine)
+str(wine)
+```
+
+## Exercise 1:
+Remove the first column from the data:
+```{r,remove_variables}
+wine$Type = NULL
+```
+Scale data using the scale function: 
+```{r, scaledata}
+df <-scale(wine[-1])
+head(df)
+```
+# Now we'd like to cluster the data using K-Means. 
+How do we decide how many clusters to use if you don't know that already?
+We'll try two methods.
+
+# Method 1:
+A plot of the total within-groups sums of squares against the number of clusters in a K-means solution.
+
+```{r,createplot1}
+wssplot <- function(data, nc=15, seed=1234){
+	              wss <- (nrow(data)-1)*sum(apply(data,2,var))
+               	      for (i in 2:nc){
+		        set.seed(seed)
+	                wss[i] <- sum(kmeans(data, centers=i)$withinss)}
+	                
+		      plot(1:nc, wss, type="b", xlab="Number of Clusters",
+	                        ylab="Within groups sum of squares")
+	   }
+
+wssplot(df)
+```
+Figure 1.
+This plot indicates that there is a significant drop in within groups sum of squares when moving from 1 to 3 clusters, which suggests that a 3 cluster model might be a good fit for the data. 
+
+##Exercise 2
+* How many clusters does this method suggest? 
+A plot of the total within-groups sums of squares against the number of clusters in a K-means solution shows a significant decline in sum of squares following 3 clusters.
+
+* Why does this method work? What's the intuition behind it?
+This method works because looking at the sums of squaress within groups provides a measurement of the total variance in the dataset, and minimizes within group dispersion and maximizes the between group dispersion. 
+
+* Look at the code for wssplot() and figure out how it works
+
+##Method 2: 
+Use the NbClust library, which runs many experiments
+
+```{r,set.seed.library}
+wssplot(df)
+library(NbClust)
+set.seed(1234)
+```
+
+```{r,set.up.kmeans}
+nc <- NbClust(df, min.nc = 2, max.nc = 15, method = "kmeans")
+table(nc$best.n[1,])
+```
+
+```{r, barplotclusters}
+barplot(table(nc$Best.n[1,]),
+        xlab="Number of Clusters", ylab = "Number of Criteria",
+        main= "Number of Clusters Chose by 26 Criteria")
+```
+# Exercise 3: How many clusters does this method suggest?
+14 of 24 criteria provided by the NbClust package suggest a 3-cluster solution.
+
+# Exercise 4: 
+Once you've picked the number of clusters, run k-means using this number of clusters. Output the result of calling kmeans()into a variable fit.km
+
+```{r,set.seed.fit}
+set.seed(1234)
+fit.km <- kmeans(df, 3, nstart=25)
+fit.km$size
+```
+Evaluate clustering performance: 
+
+##Exercise 5: 
+using the table() function, show how the clusters in fit.kmclusterscomparestotheactualwinetypesinwineclusterscomparestotheactualwinetypesinwineType. Would you consider this a good clustering?
+
+```{r, fit_cluster}
+table(fit.km$cluster, wine$Type)
+
+```
+##Exercise 6:
+Visualize these clusters using function clusplot() from the cluster library
+Would you consider this a good clustering? yes
+
+```{r, clusplot}
+clusplot(pam(df,3))
+
+```
+
